@@ -3,26 +3,28 @@
     <style>
     
     body {
-                font-family: 'Arial', sans-serif;
+                font-family: 'Source Sans Pro', sans-serif;
                 margin: 0;
                 padding: 0;
-                background-color: #f0f8ff;
+                background-color: #d4dde5;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
             }
 
             header {
-                background: linear-gradient(135deg, #6dd5ed, #2193b0);
-                color: white;
+                background: rgb(240, 232, 230);
+                color: black;
                 width: 100%;
                 padding: 20px 0;
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                border-radius: 5px;
+
             }
 
             .main-heading {
-                max-width: 800px;
-                text-align: center;
+                padding-left: 20%;
+                text-align: left;
                 margin: auto;
             }
 
@@ -34,34 +36,33 @@
                 text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
             }
 
-            #chat {
-                background-color: white;
-                padding: 20px;
+            #chat{
+                background-color: rgb(240, 232, 230);
+                padding: 100px;
                 margin-top: 40px;
                 border-radius: 8px;
                 box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
                 width: 80%;
                 max-width: 600px;
             }
+            #checklist{
+                background-color: rgb(240, 232, 230);
+                padding: 20px;
+                margin-top: 60px;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                width: 80%;
+                max-width: 600px;
+            }
 
-            .message-box {
+            .message-box{
                 padding: 10px 15px;
                 margin: 10px 0;
                 border: 1px solid #e0e0e0;
                 border-radius: 5px;
                 background-color: #f9f9f9;
             }
-
-            #message-input {
-                width: calc(100% - 30px);
-                padding: 10px 15px;
-                margin: 10px 0;
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                font-size: 16px;
-            }
-
-            button {
+            button,select{
                 padding: 10px 20px;
                 background-color: #2193b0;
                 color: white;
@@ -70,25 +71,47 @@
                 cursor: pointer;
                 font-size: 16px;
                 transition: background-color 0.3s ease;
+
             }
 
             button:hover {
                 background-color: #1a7a8c;
             }
+            .flexbox {
+                display: flex;
+                flex-direction: row;
+                gap: 100px;
+            }
+            li {
+                margin:20px;
+            }
     </style>
     <header>
         <div class="main-heading">
-        <h1>Auto Transcriber</h1>
+        <h1>Whisper</h1>
         </div>
     </header>
     <body>
+        <div id="flexbox" class="flexbox">
+            <div id= "checklistbox">
+                <ol id="checklist">
+                    <li>Mikrofon auswählen</li>
+                    <li>Auf Aufnahme Starten drücken. Knopf färbt sich rot</li>
+                    <li>Transkribierung erscheint rechts neben dem Fenster</li>
+                </ol>
+                </div>
         <div id="chat">
         <div id="chat-message">
         <form id = "chat-form">
-            <input type="text" id ="message-input" placeholder="Placeholder">
-            <button id="record-button" disabled>Start/Stop Recording</button>
+            <button id="record-button">Start/Stop Recording</button>
+            <select id="mic-select">
+                <option>Option 1</option>
+                <option>Option 2</option>
+                <option>Option 3</option>
+            </select>
         </form>
-        </div>
+                </div>
+            </div>
         </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
         <script src="script.js"></script>
