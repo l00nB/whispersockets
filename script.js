@@ -9,46 +9,36 @@ const messages = document.getElementById('chat-message');
 const recordButton = document.getElementById('record-button');
 const micselect = document.getElementById('mic-select')
 
-recordButton.onclick = function(){
-    alert("Pressed a Button");
-}
+navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(function(stream) {
+    console.log('Mic Permissions granted');
+    
+    var temp = document.createElement('option');
+    temp.innerHTML = 'Kein Mikrofon ausgewählt';
+    micselect.appendChild(temp);
 
-
-function getLocalStream() {
-     navigator.mediaDevices
-      .getUserMedia({ video: false, audio: true })
-      .then((stream) => {
-        window.localStream = stream; // A
-        window.localAudio.srcObject = stream; // B
-        window.localAudio.autoplay = true; // C
+    navigator.mediaDevices.enumerateDevices()
+      .then(function(devices) {
+        var mics = devices.filter(function(device) {
+          return device.kind === 'audioinput';
+        });
+        
+        mics.forEach(function(mic) {
+          console.log("Microphone: " + mic.label + " id = " + mic.deviceId);
+          var opt = document.createElement('option');
+          opt.value = mic.deviceId;
+          opt.innerHTML = mic.label || `Microphone ${micselect.length}`;
+          micselect.appendChild(opt);
+        });
       })
-      .catch((err) => {
-        console.error(`you got an error: ${err}`);
+      .catch(function(err) {
+        console.error(`You got an error: ${err}`);
       });
-  }
-getLocalStream();
-
-
-var temp = document.createElement('option');
-temp.innerHTML = 'Kein Mikrofon ausgewählt';
-micselect.appendChild(temp);
-
-
-navigator.mediaDevices.enumerateDevices()
-.then(function(devices) {
-  devices.forEach(function(device) { 
-    if (device.kind === 'audioinput') {
-      console.log("Microphone: " + device.label + " id = " + device.deviceId);
-      var opt = document.createElement('option');
-      opt.value = device.deviceId;  
-      opt.innerHTML = device.label || `Microphone ${micselect.length}`+ device.deviceId;
-      micselect.appendChild(opt);
-    }
+  })
+  .catch(function(err) {
+    console.log('Mic Permissions not granted');
   });
-})
-.catch(function(err) {
-    console.error(`you got an error: ${err}`);
-});
+
 
 function updateRecordingState(isRecording) {
     if (mediaRecorder) {
