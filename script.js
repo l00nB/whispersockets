@@ -1,8 +1,4 @@
-/*const socket = io('http://localhost:5000');
-
-socket.on('connect', function() {
-    console.log('Connected to server');
-}); */
+const socket = io('http://localhost:5000');
 
 const form = document.getElementById('chat-form');
 const messages = document.getElementById('chat-message');
@@ -14,7 +10,7 @@ navigator.mediaDevices.getUserMedia({ audio: true })
     console.log('Mic Permissions granted');
     
     var temp = document.createElement('option');
-    temp.innerHTML = 'Kein Mikrofon ausgewählt';
+    temp.innerHTML = 'Kein Mikrofon ausgewaehlt';
     micselect.appendChild(temp);
 
     navigator.mediaDevices.enumerateDevices()
@@ -40,12 +36,39 @@ navigator.mediaDevices.getUserMedia({ audio: true })
   });
 
 
+let mediaStream = null;
+let mediaRecorder = null;
+  
+const constraints = {
+  audio: true,
+  video: false,
+}
+
+navigator.mediaDevices.getUserMedia(constraints).then(stream =>{
+  mediaStream = stream;
+  mediaRecorder = new MediaRecorder(stream);
+  let dataChunks = [];
+  mediaRecorder.addEventListener('dataavailable', event =>{
+    let blob = new Blob(dataChunks, {type: 'audio/webm'});
+    socket.emit('audio', blob);
+    dataChunks = [];
+  });
+})
+.catch(error => {
+  console.error('Error getting audio stream:', error);
+});
+
+recordButton.addEventListener('click',() =>{
+  mediaRecorder.start()
+  console.log('test');
+});
+
 function updateRecordingState(isRecording) {
     if (mediaRecorder) {
         if (isRecording) {
-            recordButton.style.backgroundColor = '#ff4136'; // Red color when recording
+            recordButton.style.backgroundColor = '#ff4136'; 
         } else {
-            recordButton.style.backgroundColor = '#2193b0'; // Original color when not recording
+            recordButton.style.backgroundColor = '#2193b0';
         }
     }
 }
