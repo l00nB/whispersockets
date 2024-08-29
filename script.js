@@ -1,5 +1,3 @@
-const socket = io('http://localhost:5000');
-
 const form = document.getElementById('chat-form');
 const messages = document.getElementById('chat-message');
 const recordButton = document.getElementById('record-button');
@@ -35,33 +33,10 @@ navigator.mediaDevices.getUserMedia({ audio: true })
     console.log('Mic Permissions not granted');
   });
 
-
-let mediaStream = null;
-let mediaRecorder = null;
-  
-const constraints = {
-  audio: true,
-  video: false,
+recordButton.onclick = async() =>{
+  const mic = micselect.options[micselect.selectedIndex];
+  console.log(mic);
 }
-
-navigator.mediaDevices.getUserMedia(constraints).then(stream =>{
-  mediaStream = stream;
-  mediaRecorder = new MediaRecorder(stream);
-  let dataChunks = [];
-  mediaRecorder.addEventListener('dataavailable', event =>{
-    let blob = new Blob(dataChunks, {type: 'audio/webm'});
-    socket.emit('audio', blob);
-    dataChunks = [];
-  });
-})
-.catch(error => {
-  console.error('Error getting audio stream:', error);
-});
-
-recordButton.addEventListener('click',() =>{
-  mediaRecorder.start()
-  console.log('test');
-});
 
 function updateRecordingState(isRecording) {
     if (mediaRecorder) {
