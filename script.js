@@ -34,9 +34,21 @@ navigator.mediaDevices.getUserMedia({ audio: true })
   });
 
 recordButton.onclick = async() =>{
-  const mic = micselect.options[micselect.selectedIndex];
-  console.log(mic);
-}
+  const selectedMic = micselect.value;
+  console.log(selectedMic);
+      const constraints = {
+        audio: {
+            deviceId: selectedMic ? { exact: selectedMic } : undefined
+        }
+    };
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('Using microphone:', selectedMic);
+    } catch (err) {
+        console.error('Error accessing the microphone:', err);
+    }
+};
 
 function updateRecordingState(isRecording) {
     if (mediaRecorder) {
