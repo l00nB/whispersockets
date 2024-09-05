@@ -8,7 +8,7 @@ navigator.mediaDevices.getUserMedia({ audio: true })
     console.log('Mic Permissions granted');
     
     var temp = document.createElement('option');
-    temp.innerHTML = 'Kein Mikrofon ausgewaehlt';
+    temp.innerHTML = 'Kein Mikrofon ausgewählt';
     micselect.appendChild(temp);
 
     navigator.mediaDevices.enumerateDevices()
@@ -41,10 +41,11 @@ recordButton.onclick = async() =>{
             deviceId: selectedMic ? { exact: selectedMic } : undefined
         }
     };
-
     try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log('Using microphone:', selectedMic);
+        mediaRecorder = new MediaRecorder(stream);
+        
     } catch (err) {
         console.error('Error accessing the microphone:', err);
     }

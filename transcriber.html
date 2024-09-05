@@ -1,125 +1,44 @@
 <html>
-    <head><title>Chat</title></head>
-    <style>
-    
-    body {
-                font-family: 'Source Sans Pro', sans-serif;
-                margin: 0;
-                padding: 0;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                background-color: whitesmoke;
-            }
-
-            header {
-                color: black;
-                background-color: rgb(240, 232, 230);
-                width: 90%;
-                padding: 20px 0;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                border-radius: 5px;
-
-            }
-
-            .main-heading {
-                text-align: center;
-                margin: auto;
-            }
-
-            .main-heading h1 {
-                font-size: 36px;
-                margin: 0;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            }
-
-            #chat {
-                background-color: rgb(240, 232, 230);
-                padding: 20px;
-                margin-top: 40px;
-                border-radius: 8px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-                width: 80%;
-                max-width: 600px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                min-height: 200px;
-            }
-            #checklist{
-                background-color: rgb(240, 232, 230);
-                padding: 20px;
-                margin-top: 60px;
-                border-radius: 8px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-                width: 80%;
-                max-width: 600px;
-            }
-
-            .message-box{
-                padding: 10px 15px;
-                margin: 10px 0;
-                border: 1px solid #e0e0e0;
-                border-radius: 5px;
-                background-color: #f9f9f9;
-            }
-            button, select {
-                padding: 10px 20px;
-                background-color: #2193b0;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 16px;
-                transition: background-color 0.3s ease;
-                margin-bottom: 10px;
-            }
-
-            button:hover {
-                background-color: #1a7a8c;
-            }
-            .flexbox {
-                display: flex;
-                flex-direction: row;
-                gap: 100px;
-            }
-            li {
-                margin:20px;
-            }
-            .form-center {
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                gap: 10px;
-            }
-    </style>
-    <header>
-        <div class="main-heading">
-        <h1>Speech-to-Text</h1>
+<head>
+    <title>Chat</title>
+    <link href="./output.css" rel="stylesheet">
+</head>
+<body class="font-sans items-center">
+    <nav class="bg-gray-200 p-5 h-30">
+        <div class="container mx-auto">
+          <h1 class="text-3xl font-bold uppercase tracking-wide text-gray-800">Whispersocket</h1>
         </div>
-    </header>
-    <body>
-        <div id="flexbox" class="flexbox">
-            <div id= "checklistbox">
-                <ol id="checklist">
-                    <li>Mikrofon auswaehlen</li>
-                    <li>Auf Aufnahme Starten druecken. Knopf faerbt sich rot</li>
-                    <li>Transkribierung erscheint unter dem Knopf</li>
-                </ol>
-                </div>
-        <div id="chat">
-        <div id="chat-message">
-        <form id = "chat-form" class="form-center">
-            <button id="record-button" type="button">Start/Stop Recording</button>
-            <select id="mic-select">
-            </select>
-        </form>
-                </div>
+      </nav>
+    </nav>
+    <div class="flex-grow flex flex-row container mx-auto mt-10 gap-10">
+        <div id="checklistbox" class="flex-1 bg-gray-200 p-5 rounded-lg shadow-md max-w-4xl">
+            <ol id="checklist" class="list-decimal list-inside">
+                <li class="my-5">Mikrofon ausw&#228;hlen</li>
+                <li class="my-5">Auf Aufnahme Starten dr&#252;cken. Knopf f&#228;rbt sich bei Aufnahme rot</li>
+                <li class="my-5">Transkribierung erscheint im rechten Feld</li>
+            </ol>
+            <form id="chat-form" class="flex items-center gap-2">
+                <button id="record-button" type="button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Start/Stop Recording
+                </button>
+                <select id="mic-select" class="bg-white border border-gray-300 rounded px-3 py-2 size-auto">
+                </select>
+                </form>
+        </div>
+        <div id="chat" class="flex-1 bg-gray-200 p-5 rounded-lg shadow-md max-w-4xl">
             </div>
         </div>
-        <script src="/node_modules/socket.io/client-dist"></script>
-        <script src="script.js"></script>
-    </body>
+    </div>
+    </div>
+<div class="container mx-auto flex justify-center mt-10">
+  <div id="rewrite" class="bg-gray-200 p-5 rounded-lg shadow-md max-w-4xl">
+    <input type="text" id="rewrite-parameter" class="border-gray-300 rounded px-3 py-2 size-auto">
+    <button id="rewrite" type="button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+      rewrite
+    </button>
+  </div>
+</div>
+    <script src="/node_modules/socket.io/client-dist"></script>
+    <script src="script.js"></script>
+</body>
 </html>
