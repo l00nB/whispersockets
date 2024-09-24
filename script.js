@@ -2,6 +2,7 @@ const form = document.getElementById('chat-form');
 const messages = document.getElementById('chat-message');
 const recordButton = document.getElementById('record-button');
 const micselect = document.getElementById('mic-select')
+const socket = io();
 
 navigator.mediaDevices.getUserMedia({ audio: true })
   .then(function(stream) {
@@ -31,6 +32,9 @@ navigator.mediaDevices.getUserMedia({ audio: true })
   })
   .catch(function(err) {
     console.log('Mic Permissions not granted');
+    var opt = document.createElement('option');
+    opt.innerHTML = "Kein Mikrofon gefunden";
+    micselect.appendChild(opt);
   });
 
 recordButton.onclick = async() =>{
@@ -45,11 +49,30 @@ recordButton.onclick = async() =>{
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log('Using microphone:', selectedMic);
         mediaRecorder = new MediaRecorder(stream);
-        
+        let audioChunks = [];
+        mediaRecorder.ondataavailable = (event) =>{
+          audioChunks.push(event.data);
+        };
+        mediaRecorder.onstop = () =>{
+        const audioBlob = new Blob(audioChunks,{type:'audio/wav'});
+        socket.emit('audio',audioBlob);
+        };
+      mediaRecorder.start();
+      recordButton.onclick = () =>{
+        mediaRecorder.stop();
+      };
     } catch (err) {
         console.error('Error accessing the microphone:', err);
     }
 };
+
+socket.on('transcription',(text) =>{
+  console.log('transcription received from Server');
+  const chatBox = document.getElementById('chat');
+  const newMessage = document.createElement('p');
+  newMessage.textContent = text;
+  chatBox.appendChild(newMessage);
+});
 
 function updateRecordingState(isRecording) {
     if (mediaRecorder) {

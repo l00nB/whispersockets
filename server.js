@@ -4,7 +4,6 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const { io: ioClient } = require('socket.io-client');
 
-
 app.use(express.static(__dirname));
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/transcriber.html');
@@ -17,15 +16,13 @@ io.on('connection', (socket) => {
   
   socket.on('audio', (audioChunk) => {
     console.log('Received Audio');
-    
-    // Audio-Daten an den Whisper-Container senden
     whisperSocket.emit('transcribe', audioChunk);
-
-    });
   });
-   socket.on('disconnect', () => {
+
+  socket.on('disconnect', () => {
     console.log('User Disconnected');
   });
+});
 
 whisperSocket.on('transcription', (text) => {
   console.log('Transcription received:', text);
