@@ -7,7 +7,7 @@ import logging
 from aiohttp import web
 from queue import Queue
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logs
 logger = logging.getLogger(__name__)
 
 sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
@@ -15,17 +15,21 @@ app = web.Application()
 sio.attach(app)
 
 # Whisper model configuration
-DEVICE = "cpu"  # Change to "cuda" if using GPU
-COMPUTE_TYPE = "float32"  # Change to "float16" or "int8" if low on GPU memory
-MODEL_SIZE = "base"  # Change to "small", "medium", or "large" as needed
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+COMPUTE_TYPE = "float32"  # Change to "float16" or "int8" if GPU-Poor
+MODEL_SIZE = "small"  # Change to "small", "medium", or "large" as needed
 
 # Audio configuration
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 4000
 MAX_BUFFER_SIZE = SAMPLE_RATE * 30  # 30 seconds of audio at 16kHz
 
+# Load the model once at startup
 model = whisperx.load_model(MODEL_SIZE, DEVICE, compute_type=COMPUTE_TYPE)
 audio_buffer = Queue()
+
+# Global variable to store any leftover audio data from previous chunks
+audio_buffer_incomplete = b''
 
 @sio.event
 async def connect(sid, environ):
@@ -47,33 +51,66 @@ async def end_stream(sid):
     await sio.emit('stream_ended', {'message': 'Audio stream ended'}, room=sid)
 
 @sio.event
-async def audio_chunk(sid, data):
-    audio_buffer.put(data)
-    logger.debug(f"Received audio chunk from {sid} (size: {len(data)} bytes)")
-    if audio_buffer.qsize() * CHUNK_SIZE >= SAMPLE_RATE * 2:  # Process every 2 seconds of audio
-        await process_audio_buffer(sid)
+async def transcribe(sid, audio_data):
+    logger.debug(f"Received audio chunk from {sid} (size: {len(audio_data)} bytes)")
+    transcription = await transcribe_audio(audio_data)
+    if transcription:
+        await sio.emit('transcription', {'text': transcription}, room=sid)
 
-async def process_audio_buffer(sid):
-    try:
-        audio_data = b''
-        while not audio_buffer.empty() and len(audio_data) < MAX_BUFFER_SIZE:
-            audio_data += audio_buffer.get()
-        
-        if audio_data:
-            transcription = await transcribe(audio_data)
-            if transcription:
-                await sio.emit('transcription', {'text': transcription}, room=sid)
-    except Exception as e:
-        logger.error(f"Error processing audio buffer: {str(e)}")
+# there is something particularly wrong with this
+# i think giving Whisper less than 30 seconds just breaks it completly
 
-async def transcribe(audio_data):
+async def transcribe_audio(audio_data):
+    global audio_buffer_incomplete
     try:
+        # Append incoming audio data to any incomplete data from previous chunks
+        audio_data = audio_buffer_incomplete + audio_data
+        # Check if the length of the audio data is a multiple of 2 (int16 alignment)
+        if len(audio_data) % 2 != 0:
+            # Save the incomplete byte(s) to buffer and process the rest
+            audio_buffer_incomplete = audio_data[-1:]  # Save the last incomplete byte
+            audio_data = audio_data[:-1]  # Process the rest (complete audio data)
+        else:
+            audio_buffer_incomplete = b''  # Clear buffer if the data is complete
+
+        # Proceed only if we have valid audio data to process
+        if len(audio_data) == 0:
+            logger.debug("No valid audio data to process")
+            return None
+
+        # Convert audio bytes to numpy array
         audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-        audio_tensor = torch.from_numpy(audio_array).to(DEVICE)
-        
-        result = model.transcribe(audio_tensor, batch_size=16)
-        transcription = result["text"].strip()
-        return transcription
+
+        # Log audio array information for debugging
+        logger.debug(f"Audio array shape: {audio_array.shape}, dtype: {audio_array.dtype}")
+
+        # Ensure the audio is at the correct sample rate (16000 Hz)
+        if len(audio_array) != SAMPLE_RATE:
+            logger.warning(f"Unexpected audio length: {len(audio_array)}. Expected: {SAMPLE_RATE}")
+        # You can implement resampling here if needed
+
+        # Perform using the Whisper model
+        result = model.transcribe(audio_array, batch_size=16)
+        print(result)
+        # Debugging: Log the entire result to inspect the output structure
+        logger.debug(f"Transcription result: {result}")
+        # Check if result is a dictionary
+        if isinstance(result, dict):
+            # If 'text' is directly in the result
+            if "text" in result:
+                transcription = result["text"].strip()
+                return transcription
+            # If 'segments' is in the result (common structure for some Whisper models)
+            elif "segments" in result and isinstance(result["segments"], list):
+                transcription = " ".join([segment.get("text", "").strip() for segment in result["segments"]])
+                return transcription
+            else:
+                logger.error(f"Unexpected result structure. Keys found: {result.keys()}")
+                return None
+        else:
+            logger.error(f"Unexpected result type: {type(result)}. Content: {result}")
+            return None
+
     except Exception as e:
         logger.error(f"Error in transcription: {str(e)}")
         return None
