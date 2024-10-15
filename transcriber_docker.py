@@ -1,11 +1,10 @@
 import socketio
-import asyncio
 import numpy as np
 import whisper
 import torch
 import logging
 from aiohttp import web
-from queue import Queue
+
 
 logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logs
 logger = logging.getLogger(__name__)
@@ -26,10 +25,7 @@ MAX_BUFFER_SIZE = SAMPLE_RATE * 30  # 30 seconds of audio at 16kHz
 
 # Load the model once at startup
 model = whisper.load_model(MODEL_SIZE)
-audio_buffer = Queue()
 
-# Global variable to store any leftover audio data from previous chunks
-audio_buffer_incomplete = b''
 
 @sio.event
 async def connect(sid, environ):
@@ -57,8 +53,6 @@ async def transcribe(sid, audio_data):
     if transcription:
         await sio.emit('transcription', {'text': transcription}, room=sid)
 
-# there is something particularly wrong with this
-# i think giving Whisper less than 30 seconds just breaks it completly
 
 async def transcribe_audio(audio_data):
     global audio_buffer_incomplete
