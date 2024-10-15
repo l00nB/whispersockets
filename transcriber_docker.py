@@ -55,7 +55,6 @@ async def transcribe(sid, audio_data):
 
 
 async def transcribe_audio(audio_data):
-    global audio_buffer_incomplete
     try:
         audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
 

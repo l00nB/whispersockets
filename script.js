@@ -134,6 +134,6 @@ socket.on('transcription', (text) => {
 function updateRecordingState() {
   if (audioContext) {
     recordButton.style.backgroundColor = isRecording ? '#ff4136' : '#2193b0';
-    recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording;
+    recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
   }
-}'
+}
