@@ -4,9 +4,11 @@ const micSelect = document.getElementById('mic-select');
 const socket = io();
 let sendlength = 5;
 
-let mediaRecorder;
 let isRecording = false;
-let audioChunks = [];
+let audioContext;
+let scriptProcessor;
+let audioInput;
+let audioBuffer = [];
 
 navigator.mediaDevices.getUserMedia({ audio: true })
   .then(function(stream) {
@@ -49,11 +51,6 @@ recordButton.onclick = async () => {
   }
 };
 
-async function sendAudio(audioChunks){
-  const audioBlob = new Blob(audioChunks, {type:'audio/wav'});
-  socket.emit('audio', audioBlob);
-}
-
 async function startRecording() {
   const selectedMic = micSelect.value;
   console.log(`Selected microphone: ${selectedMic}`);
@@ -65,40 +62,64 @@ async function startRecording() {
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    mediaRecorder = new MediaRecorder(stream);
-    
-    mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data);
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioInput = audioContext.createMediaStreamSource(stream);
+    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+    audioInput.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
+
+    scriptProcessor.onaudioprocess = (event) => {
+      const inputBuffer = event.inputBuffer;
+      const inputData = inputBuffer.getChannelData(0);
+      audioBuffer = audioBuffer.concat(Array.from(inputData));
     };
 
-    // Set up a single interval to send audio every 5 seconds
+    isRecording = true;
+    updateRecordingState();
+
+    // Set up interval to send audio every 5 seconds
     const sendInterval = setInterval(() => {
-      if (audioChunks.length > 0 && isRecording) {
-        sendAudio(audioChunks);
-        audioChunks = []; // Clear the chunks after sending
+      if (audioBuffer.length > 0 && isRecording) {
+        sendAudioBuffer();
       } else if (!isRecording) {
-        clearInterval(sendInterval); // Stop the interval if recording has stopped
+        clearInterval(sendInterval);
       }
     }, sendlength * 1000);
 
-    mediaRecorder.start(1000); // Trigger ondataavailable every second
-    isRecording = true;
-    updateRecordingState();
   } catch (err) {
     console.error('Error accessing the microphone:', err);
   }
 }
 
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
+  if (audioContext && isRecording) {
+    scriptProcessor.disconnect();
+    audioInput.disconnect();
+    audioContext.close();
     isRecording = false;
     updateRecordingState();
-    // Send any remaining audio chunks
-    if (audioChunks.length > 0) {
-      sendAudio(audioChunks);
-      audioChunks = [];
+    // Send any remaining audio buffer
+    if (audioBuffer.length > 0) {
+      sendAudioBuffer();
     }
+  }
+}
+
+function sendAudioBuffer() {
+  if (audioBuffer.length > 0) {
+    // Convert to 16-bit PCM
+    const pcmBuffer = new Int16Array(audioBuffer.length);
+    for (let i = 0; i < audioBuffer.length; i++) {
+      const s = Math.max(-1, Math.min(1, audioBuffer[i]));
+      pcmBuffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    
+    // Send the buffer
+    socket.emit('audio', pcmBuffer.buffer);
+    
+    // Clear the buffer after sending
+    audioBuffer = [];
   }
 }
 
@@ -111,8 +132,8 @@ socket.on('transcription', (text) => {
 });
 
 function updateRecordingState() {
-  if (mediaRecorder) {
+  if (audioContext) {
     recordButton.style.backgroundColor = isRecording ? '#ff4136' : '#2193b0';
-    recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
+    recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording;
   }
-}
+}'

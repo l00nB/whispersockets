@@ -19,11 +19,10 @@ io.on('connection', (socket) => {
   console.log('User Connected');
   
   // Handle incoming audio data
-  socket.on('audio', (audioBlob) => {
+  socket.on('audio', (audioBuffer) => {
     console.log('Received Audio');
 
-    // Handle the binary audio data (audioBlob)
-    const buffer = Buffer.from(new Uint8Array(audioBlob));
+    const buffer = Buffer.from(audioBuffer);
 
     // Send the audio buffer to the Whisper transcription service
     whisperSocket.emit('transcribe', buffer);
