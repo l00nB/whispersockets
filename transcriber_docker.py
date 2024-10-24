@@ -4,7 +4,8 @@ import whisper
 import torch
 import logging
 from aiohttp import web
-
+import io
+import soundfile as sf
 
 logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logs
 logger = logging.getLogger(__name__)
@@ -49,10 +50,10 @@ async def end_stream(sid):
 @sio.event
 async def transcribe(sid, audio_data):
     logger.debug(f"Received audio chunk from {sid} (size: {len(audio_data)} bytes)")
+    print(audio_data[:10])
     transcription = await transcribe_audio(audio_data)
     if transcription:
         await sio.emit('transcription', {'text': transcription}, room=sid)
-
 
 async def transcribe_audio(audio_data):
     try:
@@ -66,7 +67,7 @@ async def transcribe_audio(audio_data):
         if len(audio_array) != MAX_BUFFER_SIZE:
             logger.warning(f"Unexpected audio length: {len(audio_array)}. Expected: {MAX_BUFFER_SIZE}")
         # Perform using the Whisper model
-        result = model.transcribe(audio_array)
+        result = model.transcribe(audio_data)
         print(result)
         # Debugging: Log the entire result to inspect the output structure
         logger.debug(f"Transcription result: {result}")

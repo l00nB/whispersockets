@@ -5,10 +5,7 @@ const socket = io();
 let sendlength = 5;
 
 let isRecording = false;
-let audioContext;
-let scriptProcessor;
-let audioInput;
-let audioBuffer = [];
+let audioChunks = [];
 
 navigator.mediaDevices.getUserMedia({ audio: true })
   .then(function(stream) {
@@ -56,32 +53,26 @@ async function startRecording() {
   console.log(`Selected microphone: ${selectedMic}`);
   const constraints = {
     audio: {
-      deviceId: selectedMic ? { exact: selectedMic } : undefined
+      deviceId: selectedMic ? { exact: selectedMic } : undefined,
     }
   };
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    audioInput = audioContext.createMediaStreamSource(stream);
-    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-
-    audioInput.connect(scriptProcessor);
-    scriptProcessor.connect(audioContext.destination);
-
-    scriptProcessor.onaudioprocess = (event) => {
-      const inputBuffer = event.inputBuffer;
-      const inputData = inputBuffer.getChannelData(0);
-      audioBuffer = audioBuffer.concat(Array.from(inputData));
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (event) =>{
+      audioChunks.push(event.data);
+      console.log(mediaRecorder.state);
+      console.log(mediaRecorder.mimeType);
     };
-
+    mediaRecorder.start(1000);
     isRecording = true;
     updateRecordingState();
-
+    console.log(audioChunks.length)
     // Set up interval to send audio every 5 seconds
     const sendInterval = setInterval(() => {
-      if (audioBuffer.length > 0 && isRecording) {
-        sendAudioBuffer();
+      if (audioChunks.length > 0 && isRecording) {
+        sendAudioChunks();
       } else if (!isRecording) {
         clearInterval(sendInterval);
       }
@@ -93,35 +84,22 @@ async function startRecording() {
 }
 
 function stopRecording() {
-  if (audioContext && isRecording) {
-    scriptProcessor.disconnect();
-    audioInput.disconnect();
-    audioContext.close();
+  if (isRecording)
     isRecording = false;
     updateRecordingState();
     // Send any remaining audio buffer
-    if (audioBuffer.length > 0) {
-      sendAudioBuffer();
+    if (audioChunks.length > 0) {
+      sendAudioChunks();
     }
-  }
+    mediaRecorder.stop()
 }
 
-function sendAudioBuffer() {
-  if (audioBuffer.length > 0) {
-    // Convert to 16-bit PCM
-    const pcmBuffer = new Int16Array(audioBuffer.length);
-    for (let i = 0; i < audioBuffer.length; i++) {
-      const s = Math.max(-1, Math.min(1, audioBuffer[i]));
-      pcmBuffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-    
-    // Send the buffer
-    socket.emit('audio', pcmBuffer.buffer);
-    
-    // Clear the buffer after sending
-    audioBuffer = [];
-  }
+function sendAudioChunks() {
+  //audioBlob = new Blob(audioChunks);    
+  socket.emit('audio', audioChunks);
+  audioChunks = [];
 }
+
 
 socket.on('transcription', (text) => {
   console.log('Transcription received from server');
@@ -132,8 +110,6 @@ socket.on('transcription', (text) => {
 });
 
 function updateRecordingState() {
-  if (audioContext) {
     recordButton.style.backgroundColor = isRecording ? '#ff4136' : '#2193b0';
     recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
-  }
 }

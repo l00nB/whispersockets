@@ -5,7 +5,7 @@ const io = require('socket.io')(http);
 const { io: ioClient } = require('socket.io-client');
 const fs = require('fs');
 const path = require('path');
-
+const FileReader = require('fileReader');
 // Serve the HTML client
 app.use(express.static(__dirname));
 app.get('/', (req, res) => {
@@ -19,13 +19,11 @@ io.on('connection', (socket) => {
   console.log('User Connected');
   
   // Handle incoming audio data
-  socket.on('audio', (audioBuffer) => {
+  socket.on('audio', (audioChunks) => {
     console.log('Received Audio');
-
-    const buffer = Buffer.from(audioBuffer);
-
+    
     // Send the audio buffer to the Whisper transcription service
-    whisperSocket.emit('transcribe', buffer);
+    whisperSocket.emit('transcribe', baseData);
   });
 
   // Handle client disconnection
