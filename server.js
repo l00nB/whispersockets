@@ -21,9 +21,10 @@ io.on('connection', (socket) => {
   // Handle incoming audio data
   socket.on('audio', (audioChunks) => {
     console.log('Received Audio');
-    
+    audioBuffer = Buffer.from(audioChunks);
     // Send the audio buffer to the Whisper transcription service
-    whisperSocket.emit('transcribe', baseData);
+    whisperSocket.emit('transcribe', audioBuffer);
+    console.log('Sent Audio')
   });
 
   // Handle client disconnection

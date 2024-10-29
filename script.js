@@ -95,8 +95,8 @@ function stopRecording() {
 }
 
 function sendAudioChunks() {
-  //audioBlob = new Blob(audioChunks);    
-  socket.emit('audio', audioChunks);
+  audioBlob = new Blob(audioChunks);    
+  socket.emit('audio', audioBlob);
   audioChunks = [];
 }
 
