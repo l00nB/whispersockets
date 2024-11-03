@@ -5,7 +5,7 @@ const io = require('socket.io')(http);
 const { io: ioClient } = require('socket.io-client');
 const fs = require('fs');
 const path = require('path');
-const FileReader = require('fileReader');
+
 // Serve the HTML client
 app.use(express.static(__dirname));
 app.get('/', (req, res) => {
@@ -15,21 +15,21 @@ app.get('/', (req, res) => {
 // Connect to Whisper transcription service
 const whisperSocket = ioClient('http://0.0.0.0:5000');
 
+// In your server.js
 io.on('connection', (socket) => {
   console.log('User Connected');
   
-  // Handle incoming audio data
-  socket.on('audio', (audioChunks) => {
-    console.log('Received Audio');
-    audioBuffer = Buffer.from(audioChunks);
-    // Send the audio buffer to the Whisper transcription service
-    whisperSocket.emit('transcribe', audioBuffer);
-    console.log('Sent Audio')
+  socket.on('audio', (base64Data) => {
+      console.log('Received Audio');
+      // Convert base64 to Buffer
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+      // Send the audio buffer to the Whisper transcription service
+      whisperSocket.emit('transcribe', audioBuffer);
+      console.log('Sent Audio');
   });
 
-  // Handle client disconnection
   socket.on('disconnect', () => {
-    console.log('User Disconnected');
+      console.log('User Disconnected');
   });
 });
 
