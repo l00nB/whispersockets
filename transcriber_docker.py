@@ -8,16 +8,20 @@ import io
 import tempfile
 import base64
 import traceback
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+torch.cuda.empty_cache()
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
 sio.attach(app)
 
 # Load the model once at startup
-model = whisper.load_model('base.en')
+model = whisper.load_model('turbo')
+
 
 def process_wav_bytes(webm_bytes: bytes, sample_rate: int = 16000):
     with tempfile.NamedTemporaryFile(suffix='.wav', delete=True) as temp_file:
@@ -57,7 +61,7 @@ async def transcribe(sid, audio_data):
         audio = whisper.pad_or_trim(audio.flatten())
         
         # Decode the audio
-        result = whisper.transcribe(model,audio)
+        result = whisper.transcribe(model,audio,language='de')
         print(result['text'])
         await sio.emit('transcription',result['text'])
 
