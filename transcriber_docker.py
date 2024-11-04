@@ -9,6 +9,7 @@ import tempfile
 import base64
 import traceback
 import os
+import multiprocessing
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -21,6 +22,10 @@ sio.attach(app)
 
 # Load the model once at startup
 model = whisper.load_model('turbo')
+if not torch.cuda.is_available():
+    total_cores = multiprocessing.cpu_count()
+    num_cores_to_use = (total_cores * 0.8)
+    torch.set_num_threads(num_cores_to_use)
 
 
 def process_wav_bytes(webm_bytes: bytes, sample_rate: int = 16000):
