@@ -10,7 +10,7 @@ let audioContext;
 let mediaStreamSource;
 let scriptProcessor;
 let vadEnabled = false;
-const SILENCE_THRESHOLD = 0.015;
+const SILENCE_THRESHOLD = 0.01;
 let activityIndicator;
 
 // Helper function to convert blob to base64
