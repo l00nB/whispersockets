@@ -10,8 +10,14 @@ let audioContext;
 let mediaStreamSource;
 let scriptProcessor;
 let vadEnabled = false;
-const SILENCE_THRESHOLD = 0.01;
+const SILENCE_THRESHOLD = 0.009;
 let activityIndicator;
+
+// Neue VAD-bezogene Variablen
+let audioBuffer = [];
+const BUFFER_SIZE = 10;
+let silenceTimer = null;
+const SILENCE_DELAY = 1000;
 
 // Helper function to convert blob to base64
 function blobToBase64(blob) {
@@ -33,12 +39,10 @@ function createActivityIndicator() {
     container.style.alignItems = 'center';
     container.style.margin = '10px 0';
 
-    // Move the record button into the container
     const originalButton = document.getElementById('record-button');
     const parentElement = originalButton.parentElement;
     container.appendChild(originalButton);
 
-    // Create the indicator
     const indicator = document.createElement('div');
     indicator.id = 'activity-indicator';
     indicator.style.width = '20px';
@@ -56,15 +60,12 @@ function createActivityIndicator() {
 function updateActivityIndicator(isActive, level = 0) {
     if (!activityIndicator) return;
     
-    // Normalize level to 0-1 range
-    level = Math.min(1, level * 5); // Amplify the level for better visibility
+    level = Math.min(1, level * 5);
     
     if (isActive) {
-        // Create a color gradient from yellow to green based on level
-        const hue = 90 + (level * 30); // 90 is yellow-green, increasing towards green
+        const hue = 90 + (level * 30);
         activityIndicator.style.backgroundColor = `hsl(${hue}, 80%, 50%)`;
         
-        // Optional: add size animation based on level
         const size = 20 + (level * 10);
         activityIndicator.style.width = `${size}px`;
         activityIndicator.style.height = `${size}px`;
@@ -115,7 +116,7 @@ recordButton.onclick = async () => {
         recordButton.textContent = 'Start Recording';
     } else {
         startRecording();
-        recordButton.textContent = 'Stop VAD';
+        recordButton.textContent = 'Stop Recording';
     }
 };
 
@@ -134,7 +135,6 @@ async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        // Set up AudioContext and VAD
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         mediaStreamSource = audioContext.createMediaStreamSource(stream);
         scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
@@ -142,37 +142,52 @@ async function startRecording() {
         mediaStreamSource.connect(scriptProcessor);
         scriptProcessor.connect(audioContext.destination);
 
-        // Voice Activity Detection
+        // Verbesserte Voice Activity Detection
         scriptProcessor.onaudioprocess = function(event) {
             if (!vadEnabled) return;
 
             const input = event.inputBuffer.getChannelData(0);
             let sum = 0;
             
-            // Calculate average amplitude
             for (let i = 0; i < input.length; i++) {
                 sum += Math.abs(input[i]);
             }
             const average = sum / input.length;
 
-            // Update activity indicator with level
-            updateActivityIndicator(average > SILENCE_THRESHOLD, average);
+            // Add to buffer
+            audioBuffer.push(average);
+            if (audioBuffer.length > BUFFER_SIZE) {
+                audioBuffer.shift();
+            }
+
+            // Calculate rolling average
+            const rollingAverage = audioBuffer.reduce((a, b) => a + b, 0) / audioBuffer.length;
+
+            // Update activity indicator
+            updateActivityIndicator(rollingAverage > SILENCE_THRESHOLD, average);
 
             // Check if sound is above threshold
-            if (average > SILENCE_THRESHOLD) {
+            if (rollingAverage > SILENCE_THRESHOLD) {
                 if (!isRecording) {
                     console.log('Voice detected - starting recording');
                     startActualRecording(stream);
                 }
+                // Reset silence timer
+                if (silenceTimer) {
+                    clearTimeout(silenceTimer);
+                    silenceTimer = null;
+                }
             } else {
-                if (isRecording) {
-                    console.log('Silence detected - stopping recording');
-                    stopRecording();
+                if (isRecording && !silenceTimer) {
+                    silenceTimer = setTimeout(() => {
+                        console.log('Silence detected - stopping recording');
+                        stopRecording();
+                        silenceTimer = null;
+                    }, SILENCE_DELAY);
                 }
             }
         };
 
-        // Enable VAD
         vadEnabled = true;
         updateRecordingState();
 
@@ -231,6 +246,12 @@ function cleanup() {
     }
     vadEnabled = false;
     isRecording = false;
+    // Reset VAD variables
+    audioBuffer = [];
+    if (silenceTimer) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+    }
     updateRecordingState();
     updateActivityIndicator(false);
 }
@@ -258,7 +279,7 @@ socket.on('error', (error) => {
 function updateRecordingState() {
     if (vadEnabled) {
         recordButton.style.backgroundColor = '#ff4136';
-        recordButton.textContent = 'Stop VAD';
+        recordButton.textContent = 'Stop Recording';
     } else if (isRecording) {
         recordButton.style.backgroundColor = '#ff4136';
         recordButton.textContent = 'Recording...';

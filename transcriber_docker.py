@@ -10,6 +10,8 @@ import base64
 import traceback
 import os
 import multiprocessing
+from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
+
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -25,15 +27,40 @@ model = whisper.load_model('turbo')
 if not torch.cuda.is_available():
     total_cores = multiprocessing.cpu_count()
     num_cores_to_use = (total_cores * 0.8)
-    torch.set_num_threads(num_cores_to_use)
+    torch.set_num_threads(int(num_cores_to_use))
 
+
+TEMP_DIR = os.path.join(os.getcwd(), 'temp_audio')
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+#use Silero VAD to detect speech
+vad_model = load_silero_vad()
+def has_speech(wavfile)->bool:
+    wav = read_audio(wavfile)
+    speech_timestamps = get_speech_timestamps(
+    wav,
+    vad_model,
+    return_seconds=True,
+    )
+    return bool(speech_timestamps)
+def remove_file(filepath):
+    try:
+        os.remove(filepath)
+    except Exception as e:
+        logger.error(f"Error deleting File: {e}")
 
 def process_wav_bytes(webm_bytes: bytes, sample_rate: int = 16000):
-    with tempfile.NamedTemporaryFile(suffix='.wav', delete=True) as temp_file:
-        temp_file.write(webm_bytes)
-        temp_file.flush()
-        waveform = whisper.load_audio(temp_file.name, sr=sample_rate)
-        return waveform
+    try:
+        # Use delete=False to ensure the file isn't locked
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False, dir=TEMP_DIR) as temp_file:
+            temp_file.write(webm_bytes)
+            temp_file.flush()
+            temp_file_path = temp_file.name
+
+        return temp_file_path
+    except Exception as e:
+        logger.error(f"Error processing audio: {e}")
+        raise
 
 @sio.event
 async def connect(sid, environ):
@@ -53,9 +80,15 @@ async def transcribe(sid, audio_data):
             audio_data = base64.b64decode(audio_data)
         
         # Process audio
-        audio = process_wav_bytes(bytes(audio_data))
+        audio_path= process_wav_bytes(bytes(audio_data))
         
+        if has_speech(audio_path) is False:
+            print("Audio not Found")
+            remove_file(audio_path)
+            return
+        audio = whisper.load_audio(audio_path, sr=16000)
         # Make sure audio is the right shape
+        remove_file(audio_path)
         if len(audio.shape) == 1:
             audio = audio.reshape(1, -1)
         
