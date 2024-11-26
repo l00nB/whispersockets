@@ -1,0 +1,13 @@
+socketio
+numpy
+whisper
+torch
+loggging
+aiohttp
+io
+tempfile
+base64
+traceback
+os
+multiprocessing
+silero_vad
