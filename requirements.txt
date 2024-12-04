@@ -1,6 +1,6 @@
 socketio
 numpy
-whisper
+openai-whisper
 torch
 loggging
 aiohttp
